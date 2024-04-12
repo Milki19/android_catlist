@@ -1,4 +1,4 @@
-package rs.raf.catlist.ui.theme
+package rs.raf.catlist.core.theme
 
 import androidx.compose.ui.graphics.Color
 

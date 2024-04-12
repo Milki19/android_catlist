@@ -1,4 +1,4 @@
-package rs.raf.catlist.ui.theme
+package rs.raf.catlist.core.theme
 
 import android.app.Activity
 import android.os.Build
