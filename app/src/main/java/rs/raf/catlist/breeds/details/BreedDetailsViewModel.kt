@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import rs.raf.catlist.breeds.api.model.BreedApiModel
+import rs.raf.catlist.breeds.domain.BreedData
+import rs.raf.catlist.breeds.list.BreedListState
 import rs.raf.catlist.breeds.repository.BreedRepository
 import java.io.IOException
 
@@ -24,51 +27,64 @@ class BreedDetailsViewModel(
 
 
     init {
-        observeBreedDetails()
         fetchBreedDetails()
     }
 
-    /**
-     * Observes breed details data from our local data
-     * and updates the state.
-     */
-    private fun observeBreedDetails() {
-        viewModelScope.launch {
-            repository.observeBreedDetails(breedId = breedId)
-                .filterNotNull()
-                .collect {
-                    setState { copy(data = it) }
-                }
-        }
-    }
-
-    /**
-     * Observes events sent to this viewModel from UI.
-     */
-    /**
-     * Triggers updating local breed details by calling "api"
-     * to get latest data and update underlying local data we use.
-     *
-     * Note that we are not updating the state here. This is done
-     * from observeBreedDetails(). Both functions are using
-     * the single source of truth (BreedRepository) so we can
-     * do this. If we break this principle, the app will stop working.
-     */
     private fun fetchBreedDetails() {
         viewModelScope.launch {
-            setState { copy(fetching = true) }
+            _state.value = _state.value.copy(fetching = true)
             try {
-                withContext(Dispatchers.IO) {
-                    repository.fetchBreedDetails(breedId = breedId)
-                }
+                val breedDetails = repository.fetchBreedDetails(breedId = breedId).breed()
+                setState { copy(breedId = breedDetails.id) }
+                setState { copy(data = breedDetails) }
+                fetchImage(breedDetails.referenceImageId)
             } catch (error: IOException) {
-                setState {
-                    copy(error = BreedDetailsState.DetailsError.DataUpdateFailed(cause = error))
-                }
+                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
             } finally {
-                setState { copy(fetching = false) }
+                _state.value = _state.value.copy(fetching = false)
             }
         }
     }
+
+    private fun fetchImage(referenceImageId: String){
+        viewModelScope.launch {
+            _state.value = _state.value.copy(fetching = true)
+            try {
+                val imageModel = repository.fetchImage(imageId = referenceImageId)
+                setState { copy(imageModel = imageModel) }
+            } catch (error: IOException) {
+                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
+            } finally {
+                _state.value = _state.value.copy(fetching = false)
+            }
+        }
+    }
+
+    private fun BreedApiModel.breed() = BreedData(
+        weight = this.weight,
+        id = this.id,
+        name = this.name,
+        alternativeNames = this.alternativeNames,
+        description = this.description,
+        temperament = this.temperament,
+        origin = this.origin,
+        lifeSpan = this.lifeSpan,
+        adaptability = this.adaptability,
+        affectionLevel = this.affectionLevel,
+        childFriendly = this.childFriendly,
+        dogFriendly = this.dogFriendly,
+        energyLevel = this.energyLevel,
+        grooming = this.grooming,
+        healthIssues = this.healthIssues,
+        intelligence = this.intelligence,
+        sheddingLevel = this.sheddingLevel,
+        socialNeeds = this.socialNeeds,
+        strangerFriendly = this.strangerFriendly,
+        vocalisation = this.vocalisation,
+
+        rare = this.rare,
+        wikipediaURL = this.wikipediaURL,
+        referenceImageId = this.referenceImageId,
+    )
 
 }

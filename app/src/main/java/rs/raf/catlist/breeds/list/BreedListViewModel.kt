@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import rs.raf.catlist.breeds.api.model.BreedApiModel
+import rs.raf.catlist.breeds.domain.BreedData
 import rs.raf.catlist.breeds.repository.BreedRepository
 import java.io.IOException
 
@@ -20,41 +22,75 @@ class BreedListViewModel (
 
 
     init {
-        observeBreeds()
         fetchBreeds()
     }
-
-    /**
-     * This will observe all breeds and update state whenever
-     * underlying data changes. We are using viewModelScope which
-     * will cancel the subscription when view model dies.
-     */
-    private fun observeBreeds() {
-        // We are launching a new coroutine
-        viewModelScope.launch {
-            // Which will observe all changes to our breeds
-            repository.observeBreeds().collect {
-                setState { copy(breeds = it) }
-            }
-        }
-    }
-
-    /**
-     * Fetches breeds from simulated api endpoint and
-     * replaces existing breeds with "downloaded" breeds.
-     */
+    
     private fun fetchBreeds() {
         viewModelScope.launch {
-            setState { copy(fetching = true) }
+            _state.value = _state.value.copy(fetching = true)
             try {
-                withContext(Dispatchers.IO) {
-                    repository.fetchBreeds()
+                val breeds = withContext(Dispatchers.IO) {
+                    repository.fetchBreeds().map {it.allBreeds()}
                 }
+                setState { copy(breeds = breeds) }
             } catch (error: IOException) {
-                setState { copy(error = BreedListState.ListError.ListUpdateFailed(cause = error)) }
+                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
             } finally {
-                setState { copy(fetching = false) }
+                _state.value = _state.value.copy(fetching = false)
             }
         }
     }
+
+    private fun BreedApiModel.allBreeds() = BreedData(
+        id = this.id,
+        weight = this.weight,
+
+        name = this.name,
+        alternativeNames = this.alternativeNames,
+        description = this.description,
+        temperament = this.temperament,
+        origin = this.origin,
+        lifeSpan = this.lifeSpan,
+        adaptability = this.adaptability,
+        affectionLevel = this.affectionLevel,
+        childFriendly = this.childFriendly,
+        dogFriendly = this.dogFriendly,
+        energyLevel = this.energyLevel,
+        grooming = this.grooming,
+        healthIssues = this.healthIssues,
+        intelligence = this.intelligence,
+        sheddingLevel = this.sheddingLevel,
+        socialNeeds = this.socialNeeds,
+        strangerFriendly = this.strangerFriendly,
+        vocalisation = this.vocalisation,
+
+        rare = this.rare,
+        wikipediaURL = this.wikipediaURL,
+        referenceImageId = this.referenceImageId
+    )
+
+    fun searchBreedByName(nameQuery: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(fetching = true)
+            try {
+                val filteredBreed = withContext(Dispatchers.IO) {
+                    repository.searchBreedByName(nameQuery).map { it.allBreeds() }
+                }
+                setState { copy(breeds = filteredBreed) }
+            } catch (error: IOException) {
+                _state.value =
+                    _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
+            } finally {
+                _state.value = _state.value.copy(fetching = false)
+            }
+        }
+    }
+
+    fun clearSearch(){
+        viewModelScope.launch{
+            fetchBreeds()
+        }
+    }
+    
+    
 }

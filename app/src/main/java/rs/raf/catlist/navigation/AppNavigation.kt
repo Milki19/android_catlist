@@ -25,16 +25,5 @@ fun AppNavigation() {
             route = "breeds/{id}",
             navController = navController,
         )
-
-//        breedsEditor(
-//            route = "breeds/editor?id={dataId}",
-//            arguments = listOf(
-//                navArgument(name = "dataId") {
-//                    this.type = NavType.StringType
-//                    this.nullable = true
-//                }
-//            ),
-//            navController = navController,
-//        )
     }
 }
