@@ -1,90 +1,104 @@
 package rs.raf.catlist.breeds.details
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rs.raf.catlist.breeds.api.model.BreedApiModel
-import rs.raf.catlist.breeds.domain.BreedData
-import rs.raf.catlist.breeds.list.BreedListState
-import rs.raf.catlist.breeds.repository.BreedRepository
-import java.io.IOException
+import rs.raf.breedlist.breeds.repository.BreedRepository
+import rs.raf.catlist.breeds.mappers.asBreedUiModel
+import rs.raf.catlist.navigation.breedId
+import rs.raf.catlist.photos.repository.PhotoRepository
+import rs.raf.catlist.photos.mappers.asPhotoUiModel
 
-class BreedDetailsViewModel(
-    private val breedId: String,
-    private val repository: BreedRepository = BreedRepository,
+import java.io.IOException
+import javax.inject.Inject
+
+@HiltViewModel
+class BreedDetailsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: BreedRepository,
+    private val photoRepository: PhotoRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(BreedDetailsState(breedId = breedId))
+    private val breedId: String = savedStateHandle.breedId
+
+    private val _state = MutableStateFlow(BreedDetailsContract.BreedDetailsState())
     val state = _state.asStateFlow()
-    private fun setState(reducer: BreedDetailsState.() -> BreedDetailsState) =
+    private fun setState(reducer: BreedDetailsContract.BreedDetailsState.() -> BreedDetailsContract.BreedDetailsState) =
         _state.getAndUpdate(reducer)
 
 
+
+
     init {
-        fetchBreedDetails()
+        fetchCat()
+        observeCatDetails()
+
     }
 
-    private fun fetchBreedDetails() {
+    private fun fetchCat() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(fetching = true)
+            setState { copy(fetching = true) }
             try {
-                val breedDetails = repository.fetchBreedDetails(breedId = breedId).breed()
-                setState { copy(breedId = breedDetails.id) }
-                setState { copy(data = breedDetails) }
-                fetchImage(breedDetails.referenceImageId)
-            } catch (error: IOException) {
-                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
+
+                withContext(Dispatchers.IO) {
+                    repository.getBreedDetails(breedId = breedId)
+                }
+
+
+            } catch (error: Exception) {
+                // TODO Handle error
             } finally {
-                _state.value = _state.value.copy(fetching = false)
+                setState { copy(fetching = false) }
             }
         }
     }
 
-    private fun fetchImage(referenceImageId: String){
+
+    private fun fetchImage(photoId: String, breedId: String){
         viewModelScope.launch {
-            _state.value = _state.value.copy(fetching = true)
             try {
-                val imageModel = repository.fetchImage(imageId = referenceImageId)
-                setState { copy(imageModel = imageModel) }
+                withContext(Dispatchers.IO) {
+                    photoRepository.fetchPhoto(photoId = photoId, breedId = breedId)
+                }
+                getImage()
             } catch (error: IOException) {
-                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
-            } finally {
-                _state.value = _state.value.copy(fetching = false)
+                setState { copy(error = true) }
             }
         }
     }
 
-    private fun BreedApiModel.breed() = BreedData(
-        weight = this.weight,
-        id = this.id,
-        name = this.name,
-        alternativeNames = this.alternativeNames,
-        description = this.description,
-        temperament = this.temperament,
-        origin = this.origin,
-        lifeSpan = this.lifeSpan,
-        adaptability = this.adaptability,
-        affectionLevel = this.affectionLevel,
-        childFriendly = this.childFriendly,
-        dogFriendly = this.dogFriendly,
-        energyLevel = this.energyLevel,
-        grooming = this.grooming,
-        healthIssues = this.healthIssues,
-        intelligence = this.intelligence,
-        sheddingLevel = this.sheddingLevel,
-        socialNeeds = this.socialNeeds,
-        strangerFriendly = this.strangerFriendly,
-        vocalisation = this.vocalisation,
 
-        rare = this.rare,
-        wikipediaURL = this.wikipediaURL,
-        referenceImageId = this.referenceImageId,
-    )
+    private fun getImage(){
+        viewModelScope.launch {
+            try {
+                val photo = withContext(Dispatchers.IO) {
+                    photoRepository.getPhotosByBreedId(breedId)[0].asPhotoUiModel()
+                }
+                setState { copy(image = photo) }
+            } catch (error: IOException) {
+                setState { copy(error = true) }
+            }
+        }
+    }
+
+
+    private fun observeCatDetails() {
+        viewModelScope.launch {
+            repository.observeBreedDetails(breedId = breedId)
+                .distinctUntilChanged()
+                .collect {
+                    setState { copy(breed = it.asBreedUiModel()) }
+                    fetchImage(it.reference_image_id, it.id)
+                }
+        }
+    }
 
 }

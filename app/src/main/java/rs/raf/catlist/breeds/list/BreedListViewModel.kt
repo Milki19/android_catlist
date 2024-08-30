@@ -1,96 +1,137 @@
 package rs.raf.catlist.breeds.list
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rs.raf.catlist.breeds.api.model.BreedApiModel
-import rs.raf.catlist.breeds.domain.BreedData
-import rs.raf.catlist.breeds.repository.BreedRepository
-import java.io.IOException
+import rs.raf.breedlist.breeds.repository.BreedRepository
+import rs.raf.catlist.auth.AuthStore
+import rs.raf.catlist.breeds.list.BreedListContract.BreedListUiEvent
+import rs.raf.catlist.breeds.list.BreedListContract.BreedListState
+import rs.raf.catlist.breeds.mappers.asBreedUiModel
 
-class BreedListViewModel (
-    private val repository: BreedRepository = BreedRepository
+
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+
+@HiltViewModel
+class BreedListViewModel @Inject constructor(
+    private val repository: BreedRepository,
+    private val authStore: AuthStore
 ) : ViewModel() {
+
     private val _state = MutableStateFlow(BreedListState())
     val state = _state.asStateFlow()
-    private fun setState(reducer: BreedListState.() -> BreedListState) = _state.getAndUpdate(reducer)
+    private fun setState(reducer: BreedListState.() -> BreedListState) = _state.update(reducer)
+
+    private val events = MutableSharedFlow<BreedListUiEvent>()
+    fun setEvent(event: BreedListUiEvent) = viewModelScope.launch { events.emit(event) }
 
 
     init {
-        fetchBreeds()
+        observeEvents()
+        fetchAllBreeds()
+        observeSearchQuery()
+        observeBreeds()
     }
-    
-    private fun fetchBreeds() {
+
+    @OptIn(FlowPreview::class)
+    private fun observeSearchQuery() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(fetching = true)
-            try {
-                val breeds = withContext(Dispatchers.IO) {
-                    repository.fetchBreeds().map {it.allBreeds()}
+            events
+                .filterIsInstance<BreedListUiEvent.SearchQueryChanged>()
+                .debounce(2.seconds)
+                .collect {
+                    // Called only when search query was changed
+                    // and once 2 seconds have passed after the last char
+
+
+                    setState {
+                        copy(filteredBreeds = state.value.breed.filter { item ->
+                            item.name.contains(state.value.query, ignoreCase = true)
+                        })
+                    }
+
+                    setState { copy(loading = false) }
                 }
-                setState { copy(breeds = breeds) }
-            } catch (error: IOException) {
-                _state.value = _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
-            } finally {
-                _state.value = _state.value.copy(fetching = false)
+        }
+    }
+
+    private fun observeEvents() {
+        viewModelScope.launch {
+            events.collect {
+                when (it) {
+//                    BreedListUiEvent.ClearSearch -> Unit
+                    BreedListUiEvent.CloseSearchMode -> setState { copy(isSearchMode = false) }
+
+                    is BreedListUiEvent.SearchQueryChanged -> {
+                        println("search query changed")
+                        println(it.query)
+                        setState { copy(query = it.query) }
+                        setState { copy(isSearchMode = true) }
+                        setState { copy(loading = true) }
+                        // onValueChange from OutlinedTextField is called for every character
+
+                        // We should handle the query text state update here, but make the api call
+                        // or any other expensive call somewhere else where we debounce the text changes
+//                        it.query // this should be added to state
+                    }
+
+                    BreedListUiEvent.Dummy -> Unit
+
+//                    is UserListUiEvent.RemoveUser -> {
+////                        handleUserDeletion(userId = it.userId)
+//                    }
+                }
             }
         }
     }
 
-    private fun BreedApiModel.allBreeds() = BreedData(
-        id = this.id,
-        weight = this.weight,
-
-        name = this.name,
-        alternativeNames = this.alternativeNames,
-        description = this.description,
-        temperament = this.temperament,
-        origin = this.origin,
-        lifeSpan = this.lifeSpan,
-        adaptability = this.adaptability,
-        affectionLevel = this.affectionLevel,
-        childFriendly = this.childFriendly,
-        dogFriendly = this.dogFriendly,
-        energyLevel = this.energyLevel,
-        grooming = this.grooming,
-        healthIssues = this.healthIssues,
-        intelligence = this.intelligence,
-        sheddingLevel = this.sheddingLevel,
-        socialNeeds = this.socialNeeds,
-        strangerFriendly = this.strangerFriendly,
-        vocalisation = this.vocalisation,
-
-        rare = this.rare,
-        wikipediaURL = this.wikipediaURL,
-        referenceImageId = this.referenceImageId
-    )
-
-    fun searchBreedByName(nameQuery: String) {
+    private fun observeBreeds() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(fetching = true)
-            try {
-                val filteredBreed = withContext(Dispatchers.IO) {
-                    repository.searchBreedByName(nameQuery).map { it.allBreeds() }
+//            setState { copy(initialLoading = true) }
+            repository.observeBreeds()
+                .distinctUntilChanged()
+                .collect {
+                    val userProfile = authStore.data.first()
+                    Log.i("VIDEO", "Users table updated.")
+                    setState {
+                        copy(
+//                            initialLoading = false,
+                            breed = it.map { it.asBreedUiModel() },
+                        )
+                    }
+                    setState { copy(nickname = userProfile.nickname) }
                 }
-                setState { copy(breeds = filteredBreed) }
-            } catch (error: IOException) {
-                _state.value =
-                    _state.value.copy(error = BreedListState.ListError.ListUpdateFailed(cause = error))
+        }
+    }
+
+    private fun fetchAllBreeds() {
+        viewModelScope.launch {
+            setState { copy(loading = true) }
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.fetchAllBreeds()
+                }
+
+            } catch (error: Exception) {
+                // TODO Handle error
             } finally {
-                _state.value = _state.value.copy(fetching = false)
+                setState { copy(loading = false) }
             }
         }
     }
 
-    fun clearSearch(){
-        viewModelScope.launch{
-            fetchBreeds()
-        }
-    }
-    
-    
 }
