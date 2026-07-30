@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rs.raf.breedlist.breeds.repository.BreedRepository
+import rs.raf.catlist.breeds.repository.BreedRepository
 import rs.raf.catlist.breeds.mappers.asBreedUiModel
 import rs.raf.catlist.navigation.breedId
 import rs.raf.catlist.photos.repository.PhotoRepository

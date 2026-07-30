@@ -20,9 +20,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-//        val app = (applicationContext as RmaApp)
-
-
         setContent {
             CatlistTheme {
 

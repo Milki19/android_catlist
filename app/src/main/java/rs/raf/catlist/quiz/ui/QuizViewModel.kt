@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rs.raf.breedlist.breeds.repository.BreedRepository
+import rs.raf.catlist.breeds.repository.BreedRepository
 import rs.raf.catlist.auth.AuthStore
 import rs.raf.catlist.leaderboard.api.module.LeaderboardPost
 import rs.raf.catlist.leaderboard.repository.LeaderboardRepository
 import rs.raf.catlist.photos.repository.PhotoRepository
-import rs.raf.catlist.quiz.di.Quiz
+import rs.raf.catlist.quiz.db.Quiz
 import rs.raf.catlist.quiz.model.QuizQuestion
 import rs.raf.catlist.quiz.repository.QuizRepository
 import java.util.Date

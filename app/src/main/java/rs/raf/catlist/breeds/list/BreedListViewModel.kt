@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rs.raf.breedlist.breeds.repository.BreedRepository
+import rs.raf.catlist.breeds.repository.BreedRepository
 import rs.raf.catlist.auth.AuthStore
 import rs.raf.catlist.breeds.list.BreedListContract.BreedListUiEvent
 import rs.raf.catlist.breeds.list.BreedListContract.BreedListState

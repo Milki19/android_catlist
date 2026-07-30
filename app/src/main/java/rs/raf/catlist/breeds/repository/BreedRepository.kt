@@ -1,4 +1,4 @@
-package rs.raf.breedlist.breeds.repository
+package rs.raf.catlist.breeds.repository
 
 
 import rs.raf.catlist.breeds.api.BreedApi

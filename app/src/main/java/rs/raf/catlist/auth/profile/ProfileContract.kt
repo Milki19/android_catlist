@@ -1,6 +1,6 @@
 package rs.raf.catlist.auth.profile
 
-import rs.raf.catlist.quiz.di.Quiz
+import rs.raf.catlist.quiz.db.Quiz
 
 interface ProfileContract {
 

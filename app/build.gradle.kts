@@ -1,11 +1,12 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
-    kotlin("plugin.serialization") version "1.9.23"
-    id("com.google.devtools.ksp") version "1.9.23-1.0.20"
+    id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
     id("androidx.room")
     id("com.google.dagger.hilt.android")
-    id("com.google.gms.google-services")
+//    alias(libs.plugins.kotlinCompose)
+//    id("com.google.gms.google-services")
 }
 android {
     namespace = "rs.raf.catlist"
@@ -147,9 +148,9 @@ dependencies {
     implementation("androidx.datastore:datastore:1.1.1")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
+//    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+//    implementation("com.google.firebase:firebase-analytics")
+//    implementation("com.google.firebase:firebase-auth")
 
 
     /*

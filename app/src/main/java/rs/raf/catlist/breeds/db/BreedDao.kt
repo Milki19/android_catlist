@@ -1,4 +1,4 @@
-package rs.raf.breedlist.breeds.db
+package rs.raf.catlist.breeds.db
 
 import androidx.room.Dao
 import androidx.room.Insert

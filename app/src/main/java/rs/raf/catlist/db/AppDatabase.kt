@@ -2,12 +2,12 @@ package rs.raf.catlist.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import rs.raf.breedlist.breeds.db.BreedDao
+import rs.raf.catlist.breeds.db.BreedDao
 import rs.raf.catlist.breeds.db.Breed
 import rs.raf.catlist.photos.db.Album
 import rs.raf.catlist.photos.db.AlbumDao
-import rs.raf.catlist.quiz.di.Quiz
-import rs.raf.catlist.quiz.di.QuizDao
+import rs.raf.catlist.quiz.db.Quiz
+import rs.raf.catlist.quiz.db.QuizDao
 
 @Database(
     entities = [

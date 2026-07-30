@@ -1,7 +1,7 @@
 package rs.raf.catlist.quiz.repository
 
 import rs.raf.catlist.db.AppDatabase
-import rs.raf.catlist.quiz.di.Quiz
+import rs.raf.catlist.quiz.db.Quiz
 import javax.inject.Inject
 
 class QuizRepository @Inject constructor(

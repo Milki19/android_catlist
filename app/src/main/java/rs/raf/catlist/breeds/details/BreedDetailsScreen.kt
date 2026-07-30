@@ -139,7 +139,7 @@ fun CatDetailsScreen(
                     }
                 } else if (state.breed != null) {
                     state.image?.let {
-                        LoginDataColumn(
+                        BreedDetailsContent(
                             data = state.breed,
                             image = it,
                             onGalleryClick = onGalleryClick,
@@ -153,7 +153,7 @@ fun CatDetailsScreen(
 }
 
 @Composable
-private fun LoginDataColumn(
+private fun BreedDetailsContent(
     data: BreedUiModel,
     image: PhotoUiModel,
     onGalleryClick: (String) -> Unit,
